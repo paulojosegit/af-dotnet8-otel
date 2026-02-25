@@ -30,35 +30,26 @@ public class HttpTrigger
 
         var traceId = Activity.Current?.TraceId.ToString();
 
-        _logger.LogInformation(
-            "Iniciando HttpTrigger1 | TraceId: {TraceId} | Path: {Path}",
-            traceId,
-            req.Path);
+        _logger.LogInformation("Iniciando HttpTrigger1 | TraceId: {TraceId} | Path: {Path}", traceId, req.Path);
 
         try
         {
             using var httpClient = new HttpClient();
 
-            _logger.LogInformation(
-                "Chamando API externa /customers | TraceId: {TraceId}",
-                traceId);
+            _logger.LogInformation("Chamando API externa /customers | TraceId: {TraceId}", traceId);
+
 
             var response1 = await httpClient.GetStringAsync("http://localhost:8080/customers");
 
-            _logger.LogInformation(
-                "Resposta recebida com sucesso | TraceId: {TraceId} | Tamanho: {Length}",
-                traceId,
-                response1.Length);
 
+            _logger.LogInformation(
+                "Resposta recebida com sucesso | TraceId: {TraceId} | Tamanho: {Length}", traceId, response1.Length);
             return new OkObjectResult(response1);
+
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Erro ao processar requisição | TraceId: {TraceId}",
-                traceId);
-
+            _logger.LogError(ex, "Erro ao processar requisição | TraceId: {TraceId}", traceId);
             return new StatusCodeResult(StatusCodes.Status500InternalServerError);
         }
     }
