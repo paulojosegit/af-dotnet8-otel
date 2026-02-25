@@ -8,7 +8,7 @@ namespace Company.Function;
 
 public class HttpTrigger
 {
-    private static readonly ActivitySource ActivitySource = new("af-dotnet8-otel");
+    private static readonly ActivitySource ActivitySource = new("af-dotnet8");
     private readonly ILogger<HttpTrigger> _logger;
 
     public HttpTrigger(ILogger<HttpTrigger> logger)

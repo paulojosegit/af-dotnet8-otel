@@ -5,6 +5,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Exporter;
+using Microsoft.Extensions.Logging;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -19,41 +20,43 @@ builder.Build().Run();
 
 static void ConfigureResource(ResourceBuilder resourceBuilder)
 {
-    resourceBuilder.AddService("azf-prod-dotnet8-v1-local");
+    resourceBuilder.AddService("af-prod-dotnet8-v4-local");
 }
 
 static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
 {
     tracerProviderBuilder
-        .AddSource("af-dotnet8-otel")
+        .AddSource("af-dotnet8")
         .AddHttpClientInstrumentation()
-        .AddConsoleExporter();
-
-    var endpoint = GetRequiredEnv("OTEL_EXPORTER_OTLP_ENDPOINT");
-    var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
-
-    tracerProviderBuilder.AddOtlpExporter(options =>
-    {
-        options.Endpoint = new Uri(endpoint);
-        options.Protocol = OtlpExportProtocol.HttpProtobuf;
-        options.Headers = headers;
-    });
+        .AddConsoleExporter()
+        .AddOtlpExporter(ConfigureOtlpExporterOptionsTraces);
 }
 
 static void ConfigureLogging(LoggerProviderBuilder loggerProviderBuilder)
 {
     loggerProviderBuilder
-        .AddConsoleExporter();
+        .AddConsoleExporter()
+        .AddOtlpExporter(ConfigureOtlpExporterOptionsLogs);
+}
 
-    var endpoint = GetRequiredEnv("OTEL_EXPORTER_OTLP_ENDPOINT");
+static void ConfigureOtlpExporterOptionsTraces(OtlpExporterOptions options)
+{
+    var endpoint = GetRequiredEnv("OTEL_TRACES_EXPORTER");
     var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
 
-    loggerProviderBuilder.AddOtlpExporter(options =>
-    {
-        options.Endpoint = new Uri(endpoint);
-        options.Protocol = OtlpExportProtocol.HttpProtobuf;
-        options.Headers = headers;
-    });
+    options.Endpoint = new Uri(endpoint);
+    options.Protocol = OtlpExportProtocol.HttpProtobuf;
+    options.Headers = headers;
+}
+
+static void ConfigureOtlpExporterOptionsLogs(OtlpExporterOptions options)
+{
+    var endpoint = GetRequiredEnv("OTEL_LOGS_EXPORTER");
+    var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
+
+    options.Endpoint = new Uri(endpoint);
+    options.Protocol = OtlpExportProtocol.HttpProtobuf;
+    options.Headers = headers;
 }
 
 static string GetRequiredEnv(string name)
