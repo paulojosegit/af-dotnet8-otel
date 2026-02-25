@@ -1,11 +1,10 @@
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Exporter;
-
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
@@ -13,7 +12,8 @@ builder.ConfigureFunctionsWebApplication();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(ConfigureResource)
-    .WithTracing(ConfigureTracing);
+    .WithTracing(ConfigureTracing)
+    .WithLogging(ConfigureLogging);
 
 builder.Build().Run();
 
@@ -25,28 +25,43 @@ static void ConfigureResource(ResourceBuilder resourceBuilder)
 static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
 {
     tracerProviderBuilder
-        .AddSource("af-otel-dotnet")
+        .AddSource("af-dotnet8-otel")
         .AddHttpClientInstrumentation()
         .AddConsoleExporter();
 
-    var endpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
-    var apiToken = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_HEADERS");
+    var endpoint = GetRequiredEnv("OTEL_EXPORTER_OTLP_ENDPOINT");
+    var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
 
-    if (string.IsNullOrWhiteSpace(endpoint))
-        throw new InvalidOperationException("OTEL_EXPORTER_OTLP_ENDPOINT não configurado.");
-
-    if (string.IsNullOrWhiteSpace(apiToken))
-        throw new InvalidOperationException("OTEL_EXPORTER_OTLP_HEADERS não configurado.");
-
-    var otlpOptions = new OtlpExporterOptions
+    tracerProviderBuilder.AddOtlpExporter(options =>
     {
-        Endpoint = new Uri(endpoint),
-        Protocol = OtlpExportProtocol.HttpProtobuf,
-        Headers = apiToken
-    };
+        options.Endpoint = new Uri(endpoint);
+        options.Protocol = OtlpExportProtocol.HttpProtobuf;
+        options.Headers = headers;
+    });
+}
 
-    var exporter = new OtlpTraceExporter(otlpOptions);
+static void ConfigureLogging(LoggerProviderBuilder loggerProviderBuilder)
+{
+    loggerProviderBuilder
+        .AddConsoleExporter();
 
-    tracerProviderBuilder.AddProcessor(
-        new SimpleActivityExportProcessor(exporter));
+    var endpoint = GetRequiredEnv("OTEL_EXPORTER_OTLP_ENDPOINT");
+    var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
+
+    loggerProviderBuilder.AddOtlpExporter(options =>
+    {
+        options.Endpoint = new Uri(endpoint);
+        options.Protocol = OtlpExportProtocol.HttpProtobuf;
+        options.Headers = headers;
+    });
+}
+
+static string GetRequiredEnv(string name)
+{
+    var value = Environment.GetEnvironmentVariable(name);
+
+    if (string.IsNullOrWhiteSpace(value))
+        throw new InvalidOperationException($"{name} não configurado.");
+
+    return value;
 }
