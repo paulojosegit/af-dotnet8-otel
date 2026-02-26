@@ -8,7 +8,7 @@ namespace Company.Function;
 
 public class HttpTrigger(ILogger<HttpTrigger> logger)
 {
-    private static readonly ActivitySource ActivitySource = new("af-dotnet8");
+    private static readonly ActivitySource ActivitySource = new("azure-function-dotnet8");
     private readonly ILogger<HttpTrigger> _logger = logger;
 
   [Function("HttpTrigger1")]
@@ -21,7 +21,7 @@ public class HttpTrigger(ILogger<HttpTrigger> logger)
         {
             using var httpClient = new HttpClient();
 
-            var response = await httpClient.GetAsync("http://localhost:8080/customers");
+            var response = await httpClient.GetAsync("https://httpbin.org/get");
 
             // 🔎 Se a dependência falhar, marcamos erro no span
             if (!response.IsSuccessStatusCode)

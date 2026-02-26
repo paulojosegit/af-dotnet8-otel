@@ -23,9 +23,9 @@ builder.Build().Run();
 static void ConfigureResource(ResourceBuilder resourceBuilder)
 {
     resourceBuilder.AddService(
-        serviceName: "af-prod-dotnet8-otel-v1",
+        serviceName: "azure-function-dotnet8-otel-v1-prod",
         serviceNamespace: "Infraestrutura",
-        serviceVersion: "1.0.3",
+        serviceVersion: "1.0",
         serviceInstanceId: Environment.MachineName
     );
 }
@@ -33,7 +33,7 @@ static void ConfigureResource(ResourceBuilder resourceBuilder)
 static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
 {
     tracerProviderBuilder
-        .AddSource("af-dotnet8")
+        .AddSource("azure-function-dotnet8")
         .AddHttpClientInstrumentation()
         .AddAspNetCoreInstrumentation()
         // .AddConsoleExporter()
