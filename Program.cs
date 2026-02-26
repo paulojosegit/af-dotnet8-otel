@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Exporter;
 using Microsoft.Extensions.Logging;
 
@@ -14,13 +15,14 @@ builder.ConfigureFunctionsWebApplication();
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(ConfigureResource)
     .WithTracing(ConfigureTracing)
-    .WithLogging(ConfigureLogging);
+    .WithLogging(ConfigureLogging)
+    .WithMetrics(ConfigureMetrics); // 👈 adicionamos métricas
 
 builder.Build().Run();
 
 static void ConfigureResource(ResourceBuilder resourceBuilder)
 {
-    resourceBuilder.AddService("af-prod-dotnet8-v5.5-local");
+    resourceBuilder.AddService("af-prod-dotnet8-v6-local");
 }
 
 static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
@@ -29,15 +31,33 @@ static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
         .AddSource("af-dotnet8")
         .AddHttpClientInstrumentation()
         .AddAspNetCoreInstrumentation()
-        .AddConsoleExporter()
+        // .AddConsoleExporter()
         .AddOtlpExporter(ConfigureOtlpExporterOptionsTraces);
 }
 
 static void ConfigureLogging(LoggerProviderBuilder loggerProviderBuilder)
 {
     loggerProviderBuilder
-        .AddConsoleExporter()
+        // .AddConsoleExporter()
         .AddOtlpExporter(ConfigureOtlpExporterOptionsLogs);
+}
+
+static void ConfigureMetrics(MeterProviderBuilder meterProviderBuilder)
+{
+    meterProviderBuilder
+        // Instrumentações automáticas
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+
+        // Runtime metrics (.NET GC, threads, etc)
+        .AddRuntimeInstrumentation()
+
+        // Caso você use métricas customizadas
+        .AddMeter("af-dotnet8")
+
+        // Exporters
+        // .AddConsoleExporter()
+        .AddOtlpExporter(ConfigureOtlpExporterOptionsMetrics);
 }
 
 static void ConfigureOtlpExporterOptionsTraces(OtlpExporterOptions options)
@@ -53,6 +73,16 @@ static void ConfigureOtlpExporterOptionsTraces(OtlpExporterOptions options)
 static void ConfigureOtlpExporterOptionsLogs(OtlpExporterOptions options)
 {
     var endpoint = GetRequiredEnv("OTEL_LOGS_EXPORTER");
+    var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
+
+    options.Endpoint = new Uri(endpoint);
+    options.Protocol = OtlpExportProtocol.HttpProtobuf;
+    options.Headers = headers;
+}
+
+static void ConfigureOtlpExporterOptionsMetrics(OtlpExporterOptions options)
+{
+    var endpoint = GetRequiredEnv("OTEL_METRICS_EXPORTER");
     var headers = GetRequiredEnv("OTEL_EXPORTER_OTLP_HEADERS");
 
     options.Endpoint = new Uri(endpoint);
