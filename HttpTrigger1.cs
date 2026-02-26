@@ -6,23 +6,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Company.Function;
 
-public class HttpTrigger
+public class HttpTrigger(ILogger<HttpTrigger> logger)
 {
     private static readonly ActivitySource ActivitySource = new("af-dotnet8");
-    private readonly ILogger<HttpTrigger> _logger;
+    private readonly ILogger<HttpTrigger> _logger = logger;
 
-    public HttpTrigger(ILogger<HttpTrigger> logger)
-    {
-        _logger = logger;
-    }
-
-    [Function("HttpTrigger1")]
+  [Function("HttpTrigger1")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
     {
-        using var activity = ActivitySource.StartActivity(
-            "HttpTrigger1",
-            ActivityKind.Server);
+        using var activity = ActivitySource.StartActivity("HttpTrigger1", ActivityKind.Server);
 
         try
         {
@@ -50,7 +43,7 @@ public class HttpTrigger
         }
         catch (Exception ex)
         {
-            // 🔥 Marca erro explícito no span
+            // Marca erro explícito no span
             activity?.AddException(ex);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 

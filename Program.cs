@@ -16,13 +16,18 @@ builder.Services.AddOpenTelemetry()
     .ConfigureResource(ConfigureResource)
     .WithTracing(ConfigureTracing)
     .WithLogging(ConfigureLogging)
-    .WithMetrics(ConfigureMetrics); // 👈 adicionamos métricas
+    .WithMetrics(ConfigureMetrics);
 
 builder.Build().Run();
 
 static void ConfigureResource(ResourceBuilder resourceBuilder)
 {
-    resourceBuilder.AddService("af-prod-dotnet8-v6-local");
+    resourceBuilder.AddService(
+        serviceName: "af-prod-dotnet8-otel-v1",
+        serviceNamespace: "Infraestrutura",
+        serviceVersion: "1.0.3",
+        serviceInstanceId: Environment.MachineName
+    );
 }
 
 static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
