@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Trace;
 
 namespace Company.Function;
 
@@ -20,37 +21,44 @@ public class HttpTrigger
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequest req)
     {
-        using var serverActivity = ActivitySource.StartActivity(
+        using var activity = ActivitySource.StartActivity(
             "HttpTrigger1",
             ActivityKind.Server);
-
-        serverActivity?.SetTag("http.request.method", req.Method);
-        serverActivity?.SetTag("url.path", req.Path);
-        serverActivity?.SetTag("server.address", req.Host.Host);
-
-        var traceId = Activity.Current?.TraceId.ToString();
-
-        _logger.LogInformation("Iniciando HttpTrigger1 | TraceId: {TraceId} | Path: {Path}", traceId, req.Path);
 
         try
         {
             using var httpClient = new HttpClient();
 
-            _logger.LogInformation("Chamando API externa /customers | TraceId: {TraceId}", traceId);
+            var response = await httpClient.GetAsync("http://localhost:8080/customers");
 
+            // 🔎 Se a dependência falhar, marcamos erro no span
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = $"Dependência retornou {(int)response.StatusCode}";
 
-            var response1 = await httpClient.GetStringAsync("http://localhost:8080/customers");
+                activity?.SetTag("dependency.status_code", (int)response.StatusCode);
+                activity?.SetStatus(ActivityStatusCode.Error, message);
 
+                _logger.LogError("Erro na dependência: {StatusCode}", response.StatusCode);
 
-            _logger.LogInformation(
-                "Resposta recebida com sucesso | TraceId: {TraceId} | Tamanho: {Length}", traceId, response1.Length);
-            return new OkObjectResult(response1);
+                // Ainda retornando 200 propositalmente
+                return new OkObjectResult("Falha na dependência, mas requisição processada.");
+            }
 
+            var content = await response.Content.ReadAsStringAsync();
+
+            return new OkObjectResult(content);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao processar requisição | TraceId: {TraceId}", traceId);
-            return new StatusCodeResult(StatusCodes.Status500InternalServerError);
+            // 🔥 Marca erro explícito no span
+            activity?.AddException(ex);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            _logger.LogError(ex, "Erro inesperado");
+
+            // Aqui você pode manter 200 se quiser
+            return new OkObjectResult("Erro interno tratado.");
         }
     }
 }

@@ -20,7 +20,7 @@ builder.Build().Run();
 
 static void ConfigureResource(ResourceBuilder resourceBuilder)
 {
-    resourceBuilder.AddService("af-prod-dotnet8-v4-local");
+    resourceBuilder.AddService("af-prod-dotnet8-v5.5-local");
 }
 
 static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
@@ -28,6 +28,7 @@ static void ConfigureTracing(TracerProviderBuilder tracerProviderBuilder)
     tracerProviderBuilder
         .AddSource("af-dotnet8")
         .AddHttpClientInstrumentation()
+        .AddAspNetCoreInstrumentation()
         .AddConsoleExporter()
         .AddOtlpExporter(ConfigureOtlpExporterOptionsTraces);
 }
